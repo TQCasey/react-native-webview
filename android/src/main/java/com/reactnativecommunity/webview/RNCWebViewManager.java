@@ -46,6 +46,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.util.Pair;
 
 import com.facebook.common.logging.FLog;
+import com.facebook.react.uimanager.events.RCTEventEmitter;
 import com.facebook.react.views.scroll.ScrollEvent;
 import com.facebook.react.views.scroll.ScrollEventType;
 import com.facebook.react.views.scroll.OnScrollDispatchHelper;
@@ -598,7 +599,7 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
   @Override
   protected void addEventEmitters(ThemedReactContext reactContext, WebView view) {
     // Do not register default touch emitter and let WebView implementation handle touches
-    view.setWebViewClient(new RNCWebViewClient());
+    view.setWebViewClient(new RNCWebViewClient(reactContext));
   }
 
   @Override
@@ -786,6 +787,13 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
     protected RNCWebView.ProgressChangedFilter progressChangedFilter = null;
     protected @Nullable String ignoreErrFailedForThisURL = null;
 
+    protected ReactContext mContext = null;
+
+
+    public RNCWebViewClient (ReactContext context) {
+      mContext = context;
+    }
+
     public void setIgnoreErrFailedForThisURL(@Nullable String url) {
       ignoreErrFailedForThisURL = url;
     }
@@ -866,6 +874,31 @@ public class RNCWebViewManager extends SimpleViewManager<WebView> {
         return true;
       }
     }
+
+    @Override
+     public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
+
+       try {
+
+         mContext.runOnUiQueueThread(new Runnable() {
+           @Override
+           public void run() {
+             WritableMap event = createWebViewEvent(view, url);
+             event.putBoolean ("shouldIntercept",true);
+             dispatchEvent(
+               view,
+               new TopShouldStartLoadWithRequestEvent(
+                 view.getId(),
+                 event));
+           }
+         });
+
+       } catch (Exception e) {
+         e.printStackTrace();
+       }
+
+       return super.shouldInterceptRequest(view, url);
+     }
 
     @TargetApi(Build.VERSION_CODES.N)
     @Override
