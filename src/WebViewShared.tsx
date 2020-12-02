@@ -41,8 +41,12 @@ const createOnShouldStartLoadWithRequest = (
 ) => {
   return ({ nativeEvent }: ShouldStartLoadRequestEvent) => {
     let shouldStart = true;
-    const { url, lockIdentifier } = nativeEvent;
+    const { url, lockIdentifier ,shouldIntercept} = nativeEvent;
 
+    if (shouldIntercept) {
+      onShouldStartLoadWithRequest && onShouldStartLoadWithRequest (nativeEvent);
+      return ;
+    }
     if (!passesWhitelist(compileWhitelist(originWhitelist), url)) {
       Linking.canOpenURL(url).then((supported) => {
         if (supported) {
